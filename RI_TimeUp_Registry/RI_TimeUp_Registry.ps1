@@ -3,16 +3,36 @@
 # Organization		: ##
 # Description		: This utility will parse out the information that is important for the Wintel team from a security scan.
 # Date Created		: 04-28-2015
-# Date Modified		: 04-29-2015
-Param
+# Date Modified		: 04-30-2015
 (
 	[Parameter(Mandatory=$True,Position=1)]
 	[string]$inputfile,
 	[Parameter(Mandatory=$True,Position=2)]
 	[string]$outputCSV
 )
-#$tempDir = $env:temp
-#$outputCSV = $tempDir + "\tempdata.txt"
+function nMaper ($serverName)
+{
+	$tempArg = "-p 443 --script +ssl-enum-ciphers " + $servername
+	$proc = New-Object System.Diagnostics.ProcessStartInfo
+	$path = "\\tac-app273\E$\Scripts\SSL Registry Check TimeUp\Nmap\nmap.exe"
+	$proc.FileName = $path
+	$proc.RedirectStandardOutput = $True
+	$proc.UseShellExecute = $false
+	$proc.Arguments = $tempArg
+	$p = New-Object System.Diagnostics.Process
+	$p.StartInfo = $proc
+	$p.Start() 
+	$p.WaitForExit()
+	$output = $p.StandardOutput.ReadToEnd() > tempStream.txt
+	$inputOne = Get-Content tempStream.txt
+	foreach($line in $inputOne)
+	{
+		if($line.StartsWith("443"))
+		{
+			return $line
+		}
+	}	
+}
 if(![System.IO.File]::Exists($outputCSV))
 {
 	New-Item $outputCSV -type file
@@ -25,7 +45,7 @@ else {
                 echo "No server list found.  Please verify the server list is in the same directory and called servers.txt"
 }
 Clear-Content $outputCSV
-Add-Content -path $outputCSV -Value "Server,Last Reboot Date,Registry Status"
+Add-Content -path $outputCSV -Value "Server,Last Reboot Date,Registry Status,NMAP Status"
 foreach($server in $servers)
 {
 	$wmiTime
@@ -49,8 +69,7 @@ foreach($server in $servers)
 		}		
 		if($RegKey.GetValue("Enabled") -eq "0")
 		{
-			$RegMessage = "Registry Settings Correct"
-			#add-content -value ($server + ":     Registry Settings Correct") -path $outputCSV 			 
+			$RegMessage = "Registry Settings Correct"				 
 		}
 		else
 		{
@@ -62,8 +81,9 @@ foreach($server in $servers)
 		$Regmessage = "Registry key does not exist"
 	}
 	$passedMessage = $server + " was last rebooted on: " + $wmitime + ". Registry Status: " + $regMessage
-	$passVar = $server + "," + $wmitime + "," + $regmessage
-	add-content -value $passvar -path $outputCSV
+	$nMapOutput = nMaper($server)	
+	$passVar = $server + "," + $wmitime + "," + $regmessage + "," + $nMapOutput
+	add-content -value $passvar -path $outputCSV	
 }
 cls
 Start-Process "excel" -ArgumentList $outputcsv
